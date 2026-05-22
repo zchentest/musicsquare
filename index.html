@@ -385,7 +385,6 @@
       display: inline-block;
       box-shadow: 0 0 6px currentColor;
     }
-    .source-dot.migu   { background:#ffb74d; color:#ffb74d;}
     .source-dot.netease{ background:#ff6b6b; color:#ff6b6b;}
     .source-dot.qq     { background:#4dd0e1; color:#4dd0e1;}
     .source-dot.kuwo   { background:#ba68c8; color:#ba68c8;}
@@ -587,7 +586,6 @@
       gap:4px;
       background:rgba(0,0,0,0.35);
     }
-    .source-pill.source-migu   { color:#ffb74d; background:rgba(255,183,77,0.12);}
     .source-pill.source-netease{ color:#ff7b7b; background:rgba(255,107,107,0.12);}
     .source-pill.source-qq     { color:#7ee5f0; background:rgba(77,208,225,0.12);}
     .source-pill.source-kuwo   { color:#e2baff; background:rgba(186,104,200,0.12);}
@@ -1247,7 +1245,7 @@
             <span class="icon">🔍</span>
             <span data-i18n="searchTitle">歌曲搜索</span>
           </div>
-          <span class="chip" data-i18n="searchSubtitle">支持咪咕 / 网易云 / QQ / 酷我</span>
+          <span class="chip" data-i18n="searchSubtitle">支持网易云 / QQ / 酷我 / JOOX</span>
         </div>
         <div class="search-panel-content">
           <div class="search-row ripple-target">
@@ -1258,11 +1256,6 @@
           </div>
 
           <div class="source-row">
-            <label class="source-chip ripple-target">
-              <span class="source-dot migu"></span>
-              <input type="checkbox" data-source="migu" checked />
-              <span>咪咕</span>
-            </label>
             <label class="source-chip ripple-target">
               <span class="source-dot netease"></span>
               <input type="checkbox" data-source="netease" checked />
@@ -1514,7 +1507,7 @@
         shortcutFocusSearch:"聚焦搜索框",
         shortcutCloseModal:"提示：按 Esc 可以关闭弹窗。",
         searchTitle:"歌曲搜索",
-        searchSubtitle:"支持咪咕 / 网易云 / QQ / 酷我 / JOOX",
+        searchSubtitle:"支持网易云 / QQ / 酷我 / JOOX",
         searchButton:"搜索",
         perSourceCount:"每个源加载",
         perSourceCountTail:"首结果",
@@ -1560,7 +1553,6 @@
         toastPlaymodeShuffle:"播放模式：随机播放",
         toastNeedPlaylistSelected:"请先选择一个歌单。",
         toastNoCurrentTrack:"当前没有正在播放的歌曲。",
-        sourceMigu:"咪咕",
         sourceNetease:"网易云",
         sourceQQ:"QQ音乐",
         sourceKuwo:"酷我",
@@ -1586,7 +1578,7 @@
         shortcutFocusSearch:"Focus on search box",
         shortcutCloseModal:"Tip: press Esc to close dialogs.",
         searchTitle:"Search",
-        searchSubtitle:"Supports Migu / Netease / QQ / Kuwo / JOOX",
+        searchSubtitle:"Supports Netease / QQ / Kuwo / JOOX",
         searchButton:"Search",
         perSourceCount:"Per source",
         perSourceCountTail:"results",
@@ -1632,7 +1624,6 @@
         toastPlaymodeShuffle:"Play mode: shuffle",
         toastNeedPlaylistSelected:"Please select a playlist first.",
         toastNoCurrentTrack:"No track is currently playing.",
-        sourceMigu:"Migu",
         sourceNetease:"Netease",
         sourceQQ:"QQ Music",
         sourceKuwo:"Kuwo",
@@ -1646,10 +1637,10 @@
 
     const state = {
       language:'zh',
-      enabledSources:{migu:true, netease:true, qq:true, kuwo:true, joox:false},
+      enabledSources:{netease:true, qq:true, kuwo:true, joox:false},
       perSourceLimit:10,
-      perSourceCurrentLimit:{migu:10, netease:10, qq:10, kuwo:10, joox:10},
-      perSourcePage:{migu:1, netease:1, qq:1, kuwo:1, joox:1},
+      perSourceCurrentLimit:{netease:10, qq:10, kuwo:10, joox:10},
+      perSourcePage:{netease:1, qq:1, kuwo:1, joox:1},
 
       searchKeyword:'',
       searchResults:[],
@@ -1688,11 +1679,11 @@
     }
 
     function getInterleavedSearchList(){
-      const grouped={migu:[],netease:[],qq:[],kuwo:[],joox:[]};
+      const grouped={netease:[],qq:[],kuwo:[],joox:[]};
       state.searchResults.forEach(t=>{if(grouped[t.source])grouped[t.source].push(t);});
       Object.keys(grouped).forEach(k=>grouped[k].sort((a,b)=>(a.displayIndex||0)-(b.displayIndex||0)));
-      const order=['migu','netease','qq','kuwo','joox'];
-      const idx={migu:0,netease:0,qq:0,kuwo:0,joox:0};
+      const order=['netease','qq','kuwo','joox'];
+      const idx={netease:0,qq:0,kuwo:0,joox:0};
       const out=[];
       let added=true;
       while(added){
@@ -1761,7 +1752,7 @@
     function serializeTrack(track){
       if(!track) return null;
       const keys=[
-        'uid','source','displayIndex','keyword','requestNum','songid','songMid','qqId','qqSearchKey','qqIndex',
+        'uid','source','displayIndex','keyword','songid','songMid','qqId','qqSearchKey','qqIndex',
         'jooxIndex','jooxSongId','jooxSongMid','title','artist','album','cover','pageUrl',
         'quality','qualityLabel','qqQualityText','jooxQualityText','pay'
       ];
@@ -1777,6 +1768,7 @@
     }
 
     function deserializeTrack(raw){
+      if(raw && raw.source === 'migu') return null;
       const track=serializeTrack(raw);
       if(!track) return null;
       track.detailsLoaded=false;
@@ -1881,146 +1873,6 @@
     }
 
     // ===================== 各平台搜索 =====================
-
-    // 咪咕官方接口：搜索 + 加密响应处理
-    // 浏览器直连官方接口时不能带 ua/version/channel/signature 等自定义请求头，
-    // 否则会触发 CORS 预检并导致 Network 里 0 B transferred / Provisional headers。
-    // 这里保留变量名，尽量少改下面的调用。
-    const MIGU_API_HEADERS = {};
-    const MIGU_LISTEN_HEADERS = {};
-    const MIGU_MAGIC = [0xab, 0xcd, 0x01];
-    const MIGU_KEY_BYTES = new TextEncoder().encode("Jk8qzuePiJ1qE3mDYhLQ3T73DtDoAhLP");
-
-    function buildMiguSearchUrl(keyword, pageNo, pageSize){
-      const params = new URLSearchParams();
-      params.set("text", keyword);
-      params.set("pageNo", String(pageNo || 1));
-      params.set("pageSize", String(pageSize || 20));
-      params.set("isCopyright", "1");
-      params.set("sort", "1");
-      params.set("searchSwitch", JSON.stringify({
-        song: 1, album: 0, singer: 0, tagSong: 1, mvSong: 0, bestShow: 1
-      }));
-      return "https://c.musicapp.migu.cn/v1.0/content/search_all.do?" + params.toString();
-    }
-
-    async function fetchMiguJson(url, options){
-      const res = await fetch(url, options || {});
-      const raw = new Uint8Array(await res.arrayBuffer());
-      const encrypted = res.headers.get("signature") === "1" ||
-        (raw.length > 4 && raw[0] === MIGU_MAGIC[0] && raw[1] === MIGU_MAGIC[1] && raw[2] === MIGU_MAGIC[2]);
-
-      let text;
-      if(encrypted){
-        const seed = raw[3];
-        const plain = new Uint8Array(raw.length - 4);
-        for(let i = 0; i < plain.length; i++){
-          plain[i] = (raw[i + 4] + seed - MIGU_KEY_BYTES[i % MIGU_KEY_BYTES.length]) & 0xff;
-        }
-        text = new TextDecoder("utf-8").decode(plain);
-      }else{
-        text = new TextDecoder("utf-8").decode(raw);
-      }
-      return JSON.parse(text);
-    }
-
-    function getMiguSongResults(json){
-      return (json && json.songResultData && Array.isArray(json.songResultData.result))
-        ? json.songResultData.result
-        : [];
-    }
-
-    function getMiguSingerText(it){
-      const list = it.singers || it.singerList || [];
-      if(Array.isArray(list) && list.length){
-        return list.map(s => s && (s.name || s.singerName)).filter(Boolean).join(", ");
-      }
-      return it.singer || it.singerName || "";
-    }
-
-    function getMiguAlbumText(it){
-      const list = it.albums || [];
-      if(it.album) return it.album;
-      if(Array.isArray(list) && list.length){
-        return list.map(a => a && (a.name || a.albumName)).filter(Boolean).join(", ");
-      }
-      return "";
-    }
-
-    function normalizeMiguCover(url){
-      if(!url) return null;
-      if(/^https?:\/\//i.test(url)) return url;
-      if(url.startsWith("//")) return location.protocol + url;
-      try{return new URL(url, "https://d.musicapp.migu.cn").href;}catch(e){return url;}
-    }
-
-    function getMiguCover(it){
-      const imgItems = Array.isArray(it.imgItems) ? it.imgItems : [];
-      const fromItems = imgItems.length ? imgItems[imgItems.length - 1].img : null;
-      return normalizeMiguCover(fromItems || it.img3 || it.img2 || it.img1 || it.cover || null);
-    }
-
-    function getMiguFormats(it){
-      return []
-        .concat(Array.isArray(it.rateFormats) ? it.rateFormats : [])
-        .concat(Array.isArray(it.newRateFormats) ? it.newRateFormats : [])
-        .concat(Array.isArray(it.audioFormats) ? it.audioFormats : [])
-        .filter(f => f && f.formatType && f.resourceType && f.formatType !== "Z3D");
-    }
-
-    function getMiguFormatSize(meta){
-      const raw = String(
-        (meta && (meta.size || meta.iosSize || meta.androidSize || meta.isize || meta.asize)) || "0"
-      ).replace(/MB$/i, "").trim();
-      const n = Number(raw);
-      return Number.isFinite(n) ? n : 0;
-    }
-
-    async function searchMigu(kw,limit){
-      const url = buildMiguSearchUrl(kw, 1, limit);
-      let added=0;
-      try{
-        const json = await fetchMiguJson(url, {headers: MIGU_API_HEADERS});
-        const list = getMiguSongResults(json);
-        list.slice(0, limit || list.length).forEach((it, idx)=>{
-          const contentId = it.contentId || it.songId || "";
-          const copyrightId = it.copyrightId || "";
-          if(!contentId || !copyrightId) return;
-
-          const uid=`migu-${contentId}-${copyrightId}`;
-          if(state.trackMap.has(uid))return;
-
-          const track={
-            uid,
-            source:'migu',
-            displayIndex:idx+1,
-            keyword:kw,
-            requestNum: limit,
-
-            songid:contentId,
-            contentId,
-            copyrightId,
-            miguRaw:it,
-
-            title:it.name||it.songName||'',
-            artist:getMiguSingerText(it),
-            album:getMiguAlbumText(it),
-            cover:getMiguCover(it),
-
-            audioUrl:null,
-            lrc:null,
-            lrcUrl:it.lyricUrl||null,
-            detailsLoaded:false,
-            quality:null,
-            qualityLabel:null
-          };
-          state.trackMap.set(uid,track);
-          state.searchResults.push(track);
-          added++;
-        });
-      }catch(e){console.error('migu official search',e);}
-      return added;
-    }
 
     // 网易云搜索（用 vkeys，page + num）
     async function searchNetease(kw, page, num){
@@ -2262,8 +2114,6 @@
       const tasks=[];
       for(const s of enabled){
         const limit=state.perSourceCurrentLimit[s]||state.perSourceLimit;
-
-        if(s==='migu')tasks.push(searchMigu(kw,limit));
         if(s==='netease')tasks.push(searchNetease(kw, state.perSourcePage.netease || 1, state.perSourceLimit));
         if(s==='qq')tasks.push(searchQQ(kw,limit));
         if(s==='kuwo')tasks.push(searchKuwo(kw,limit));
@@ -2293,106 +2143,6 @@
     }
 
     // ===================== 各平台详情 =====================
-
-    async function fetchMiguDetails(track){
-      let searchResult = track.miguRaw || null;
-      const num = track.requestNum || state.perSourceCurrentLimit.migu || state.perSourceLimit || 20;
-
-      if(!searchResult || !searchResult.contentId || !searchResult.copyrightId){
-        const keyword = (track.keyword || `${track.title || ''} ${track.artist || ''}`).trim();
-        if(keyword){
-          const searchUrl = buildMiguSearchUrl(keyword, 1, num);
-          const searchJson = await fetchMiguJson(searchUrl, {headers: MIGU_API_HEADERS});
-          const list = getMiguSongResults(searchJson);
-          searchResult =
-            list.find(it => (it.contentId || it.songId || '') === (track.contentId || track.songid || '')) ||
-            list[(track.displayIndex || 1) - 1] ||
-            list[0] ||
-            null;
-          if(searchResult) track.miguRaw = searchResult;
-        }
-      }
-
-      if(!searchResult) throw new Error('migu official detail missing search result');
-
-      const contentId = searchResult.contentId || searchResult.songId || track.contentId || track.songid || '';
-      const copyrightId = searchResult.copyrightId || track.copyrightId || '';
-      if(!contentId || !copyrightId) throw new Error('migu official detail missing ids');
-
-      Object.assign(track,{
-        title:searchResult.name||searchResult.songName||track.title,
-        artist:getMiguSingerText(searchResult)||track.artist,
-        album:getMiguAlbumText(searchResult)||track.album,
-        cover:getMiguCover(searchResult)||track.cover,
-        songid:contentId,
-        contentId,
-        copyrightId,
-        lrcUrl:searchResult.lyricUrl||track.lrcUrl||null
-      });
-
-      const formats = getMiguFormats(searchResult)
-        .sort((a,b)=>getMiguFormatSize(b)-getMiguFormatSize(a));
-
-      for(const fmt of formats){
-        const params = new URLSearchParams();
-        params.set("contentId", contentId);
-        params.set("copyrightId", copyrightId);
-        params.set("resourceType", fmt.resourceType);
-        params.set("netType", "01");
-        params.set("toneFlag", fmt.formatType);
-        params.set("scene", "");
-        params.set("lowerQualityContentId", contentId);
-
-        try{
-          const listenUrl = "https://c.musicapp.migu.cn/strategy/listen-url/h5/v2.4?" + params.toString();
-          const result = await fetchMiguJson(listenUrl, {headers: MIGU_LISTEN_HEADERS});
-          let playUrl = result && result.data && result.data.url;
-          if(!playUrl){
-            playUrl =
-              `https://app.pd.nf.migu.cn/MIGUM3.0/v1.0/content/sub/listenSong.do` +
-              `?channel=mx&copyrightId=${encodeURIComponent(copyrightId)}` +
-              `&contentId=${encodeURIComponent(contentId)}` +
-              `&toneFlag=${encodeURIComponent(fmt.formatType)}` +
-              `&resourceType=${encodeURIComponent(fmt.resourceType)}` +
-              `&userId=15548614588710179085069&netType=00`;
-          }
-          playUrl = String(playUrl || '').replace(/(?<=\/)MP3_128_16_Stero(?=\/)/, 'MP3_320_16_Stero');
-          if(playUrl && /^https?:\/\//i.test(playUrl)){
-            track.audioUrl = playUrl;
-            const q = inferQualityFromUrl(track.audioUrl);
-            track.quality = q.tag;
-            track.qualityLabel = q.label;
-            break;
-          }
-        }catch(e){
-          console.warn('migu official listen url failed', e);
-        }
-      }
-
-      if(!track.lrcUrl){
-        try{
-          const lyricApi =
-            `https://app.c.nf.migu.cn/MIGUM3.0/strategy/pc/listen/v1.0` +
-            `?scene=&netType=01&resourceType=2` +
-            `&copyrightId=${encodeURIComponent(copyrightId)}` +
-            `&contentId=${encodeURIComponent(contentId)}` +
-            `&toneFlag=PQ`;
-          const lyricJson = await fetchMiguJson(lyricApi, {headers: MIGU_API_HEADERS});
-          track.lrcUrl = lyricJson && lyricJson.data && lyricJson.data.lrcUrl || track.lrcUrl;
-        }catch(e){
-          console.warn('migu official lyric url failed', e);
-        }
-      }
-
-      if(track.lrcUrl && !track.lrc){
-        try{
-          const r=await fetch(track.lrcUrl);
-          track.lrc=await r.text();
-        }catch(e){}
-      }
-
-      track.detailsLoaded=true;
-    }
 
     // 网易云详情：meting 拿音源 + vkeys 拿歌词
     async function fetchNeteaseDetails(track){
@@ -2597,8 +2347,7 @@
     async function ensureTrackDetails(track){
       if(track.detailsLoaded && track.audioUrl && (track.lrc || !track.lrcUrl)) return;
       dom.playerStatus.textContent=t('playerStatusLoading');
-      if(track.source==='migu') await fetchMiguDetails(track);
-      else if(track.source==='netease') await fetchNeteaseDetails(track);
+      if(track.source==='netease') await fetchNeteaseDetails(track);
       else if(track.source==='kuwo') await fetchKuwoDetails(track);
       else if(track.source==='joox') await fetchJooxDetails(track);
       else await fetchQQDetails(track);
@@ -2698,8 +2447,7 @@
         dom.trackArtist.textContent=track.artist||'';
 
         const sk=track.source;
-        const key=sk==='migu'?'sourceMigu':
-                  sk==='netease'?'sourceNetease':
+        const key=sk==='netease'?'sourceNetease':
                   sk==='qq'?'sourceQQ':
                   sk==='joox'?'sourceJoox':'sourceKuwo';
         dom.trackSourcePill.style.display='inline-flex';
@@ -2880,8 +2628,7 @@
         src.className='mini-source';
         const dot=document.createElement('span');
         dot.className='source-dot '+track.source;
-        const key=track.source==='migu'?'sourceMigu':
-                 track.source==='netease'?'sourceNetease':
+        const key=track.source==='netease'?'sourceNetease':
                  track.source==='qq'?'sourceQQ':
                  track.source==='joox'?'sourceJoox':'sourceKuwo';
         const txt=document.createElement('span');
@@ -2953,8 +2700,7 @@
         const aSpan=document.createElement('span'); aSpan.textContent=track.artist||'';
         const sSpan=document.createElement('span');
         const dot=document.createElement('span'); dot.className='source-dot '+track.source;
-        const key=track.source==='migu'?'sourceMigu':
-                 track.source==='netease'?'sourceNetease':
+        const key=track.source==='netease'?'sourceNetease':
                  track.source==='qq'?'sourceQQ':
                  track.source==='joox'?'sourceJoox':'sourceKuwo';
         const txt=document.createElement('span'); txt.textContent=t(key);
